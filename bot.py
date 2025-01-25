@@ -1,29 +1,36 @@
-import sys
-import os
+ import os
 import logging
-from telegram import InlineQueryResultArticle, InputTextMessageContent, Update
+import asyncio
+from flask import Flask, request
+from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext import ApplicationBuilder, CommandHandler, InlineQueryHandler, ContextTypes
+from uuid import uuid4
 from googleapiclient.discovery import build
 import requests
-from uuid import uuid4
 
-# Suppress logging output (you can adjust this based on what you want)
+# Initialize Flask app
+app = Flask(__name__)
+
+# Suppress logging output
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.WARNING  # Change to WARNING or ERROR to suppress info/debug logs
 )
 logger = logging.getLogger(__name__)
 
-# Redirect stdout to /dev/null (this suppresses print statements)
-sys.stdout = open(os.devnull, 'w')
-
-# Define your bot token, YouTube API key, Google Custom Search API key, and Giphy API key
+# Define your bot token
 BOT_TOKEN = "7564262351:AAGzU9ipJT1CN01JvNTgSQVBhzmhjbm5Bp4"
+
+# Define API keys for YouTube, Google, and Giphy
 YOUTUBE_API_KEY = "AIzaSyCHcbAHrO383FWQqIXrS-H7Xid1G4CaGeg"
 GOOGLE_API_KEY = "AIzaSyCHcbAHrO383FWQqIXrS-H7Xid1G4CaGeg"
 GOOGLE_CX = "a54de47eb8d024e8f"
 GIPHY_API_KEY = "cd2qSZ4eWr8ineY0X9rhBalcuWVrRxyx"
 
+# Create your bot application
+application = ApplicationBuilder().token(BOT_TOKEN).build()
+
+# Define API search functions
 def search_youtube(query):
     youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
     request = youtube.search().list(
@@ -136,30 +143,25 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     await update.inline_query.answer(results)
 
+# Webhook route for Telegram updates
+@app.route(f'/{BOT_TOKEN}', methods=['POST'])
+def webhook():
+    json_str = request.get_data().decode("UTF-8")
+    update = Update.de_json(json_str, application.bot)
+    application.process_update(update)
+    return "OK"
+
 # Main function to start the bot
-def main():
-    application = ApplicationBuilder().token(BOT_TOKEN).build()
+async def main():
+    # Set the webhook URL (your provided URL)
+    webhook_url = "https://Wanderer.render.com/7564262351:AAGzU9ipJT1CN01JvNTgSQVBhzmhjbm5Bp4"
 
-    # Add command and inline query handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(InlineQueryHandler(inline_query))
+    # Set the webhook for Telegram to start receiving updates
+    await application.bot.set_webhook(url=webhook_url)
 
-    # Start the bot
-    application.run_polling()
+    # Run Flask server to listen for incoming updates
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
 
 if __name__ == "__main__":
-    main()
-    from flask import Flask
-from threading import Thread
-
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Bot is running!"
-
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-Thread(target=run).start()
-
+    # Run the main function using asyncio
+    asyncio.run(main())
