@@ -6,6 +6,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, InlineQueryHandler,
 from googleapiclient.discovery import build
 from flask import Flask
 from threading import Thread
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -148,10 +149,22 @@ def home():
 def run():
     app.run(host='0.0.0.0', port=8080)
 
+# Function to ping the app periodically (every 5 minutes)
+def ping_app():
+    while True:
+        try:
+            requests.get('https://wanderer-5g5v.onrender.com')  # Ping your app URL
+        except requests.exceptions.RequestException as e:
+            print(f"Error pinging app: {e}")
+        time.sleep(300)  # Sleep for 5 minutes (300 seconds)
+
 # Main function to start the bot and Flask app
 def main():
     # Start the Flask app in a separate thread
     Thread(target=run).start()
+
+    # Start pinging the app every 5 minutes in a separate thread
+    Thread(target=ping_app).start()
 
     # Add command and inline query handlers
     application.add_handler(CommandHandler("start", start))
