@@ -1,4 +1,4 @@
- from telegram import InlineQueryResultArticle, InputTextMessageContent, Update
+from telegram import InlineQueryResultArticle, InputTextMessageContent, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, InlineQueryHandler, ContextTypes
 from googleapiclient.discovery import build
 import requests
