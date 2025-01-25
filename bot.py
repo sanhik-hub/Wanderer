@@ -1,16 +1,21 @@
+import sys
+import os
+import logging
 from telegram import InlineQueryResultArticle, InputTextMessageContent, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, InlineQueryHandler, ContextTypes
 from googleapiclient.discovery import build
 import requests
-import logging
 from uuid import uuid4
 
-# Configure logging
+# Suppress logging output (you can adjust this based on what you want)
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.WARNING  # Change to WARNING or ERROR to suppress info/debug logs
 )
 logger = logging.getLogger(__name__)
+
+# Redirect stdout to /dev/null (this suppresses print statements)
+sys.stdout = open(os.devnull, 'w')
 
 # Define your bot token, YouTube API key, Google Custom Search API key, and Giphy API key
 BOT_TOKEN = "7564262351:AAGzU9ipJT1CN01JvNTgSQVBhzmhjbm5Bp4"
@@ -144,7 +149,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-from flask import Flask
+    from flask import Flask
 from threading import Thread
 
 app = Flask('')
@@ -157,3 +162,4 @@ def run():
     app.run(host='0.0.0.0', port=8080)
 
 Thread(target=run).start()
+
