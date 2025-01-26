@@ -237,8 +237,8 @@ async def chatgpt_response(query: str) -> str:
         )
         return response.choices[0].text.strip()
     except Exception as e:
-        return f"Error: {str(e)}"
-        def main():
+        return f"Error: {str(e)}"  
+def main():
     # Start the Flask app in a separate thread
     Thread(target=run).start()
 
