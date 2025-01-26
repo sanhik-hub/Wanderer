@@ -133,56 +133,65 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     results = []
 
-    # Fetch YouTube videos
-    videos = search_youtube(query)
-    for video in videos:
+    if query.lower().startswith("chatgpt:"):
+        # If query starts with 'chatgpt:', use ChatGPT to answer the query
+        gpt_query = query[len("chatgpt:"):].strip()  # Remove 'chatgpt:' prefix
+        response = await chatgpt_response(gpt_query)
         results.append(
             InlineQueryResultArticle(
                 id=str(uuid4()),
-                title=f"YouTube: {video['title']}",
-                input_message_content=InputTextMessageContent(video["url"]),
-                description=f"Watch on YouTube: {video['url']}",
+                title="ChatGPT Response",
+                input_message_content=InputTextMessageContent(response),
+                description=f"Response from ChatGPT: {response}",
             )
         )
+    else:
+        # Your other API search logic (YouTube, Google, etc.)
+        videos = search_youtube(query)
+        for video in videos:
+            results.append(
+                InlineQueryResultArticle(
+                    id=str(uuid4()),
+                    title=f"YouTube: {video['title']}",
+                    input_message_content=InputTextMessageContent(video["url"]),
+                    description=f"Watch on YouTube: {video['url']}",
+                )
+            )
 
-    # Fetch Google search results
-    google_results = search_google(query)
-    for result in google_results:
-        results.append(
-            InlineQueryResultArticle(
-                id=str(uuid4()),
-                title=f"Google: {result['title']}",
-                input_message_content=InputTextMessageContent(result["url"]),
-                description=f"View on Google: {result['url']}",
+        google_results = search_google(query)
+        for result in google_results:
+            results.append(
+                InlineQueryResultArticle(
+                    id=str(uuid4()),
+                    title=f"Google: {result['title']}",
+                    input_message_content=InputTextMessageContent(result["url"]),
+                    description=f"View on Google: {result['url']}",
+                )
             )
-        )
 
-    # Fetch GIFs
-    gifs = search_gif(query)
-    for gif in gifs:
-        results.append(
-            InlineQueryResultArticle(
-                id=str(uuid4()),
-                title=f"GIF: {gif['title']}",
-                input_message_content=InputTextMessageContent(gif["url"]),
-                description=f"View GIF: {gif['url']}",
+        gifs = search_gif(query)
+        for gif in gifs:
+            results.append(
+                InlineQueryResultArticle(
+                    id=str(uuid4()),
+                    title=f"GIF: {gif['title']}",
+                    input_message_content=InputTextMessageContent(gif["url"]),
+                    description=f"View GIF: {gif['url']}",
+                )
             )
-        )
 
-    # Fetch music
-    music_results = search_music(query)
-    for music in music_results:
-        results.append(
-            InlineQueryResultArticle(
-                id=str(uuid4()),
-                title=f"Music: {music['title']}",
-                input_message_content=InputTextMessageContent(music["url"]),
-                description=f"Listen: {music['url']}",
+        music_results = search_music(query)
+        for music in music_results:
+            results.append(
+                InlineQueryResultArticle(
+                    id=str(uuid4()),
+                    title=f"Music: {music['title']}",
+                    input_message_content=InputTextMessageContent(music["url"]),
+                    description=f"Listen: {music['url']}",
+                )
             )
-        )
 
     await update.inline_query.answer(results)
-
 # Flask app to run alongside the bot
 app = Flask(__name__)
 
