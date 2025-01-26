@@ -245,3 +245,15 @@ async def chat_with_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 # Add the message handler for non-command messages
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_with_bot))
+async def chatgpt_response(query: str) -> str:
+    try:
+        response = openai.Completion.create(
+            model="text-davinci-003",  # Use appropriate model
+            prompt=query,
+            temperature=0.7,  # You can adjust this to make responses more creative
+            max_tokens=150  # You can adjust this for response length
+        )
+        return response.choices[0].text.strip()
+    except Exception as e:
+        return f"Error: {str(e)}"
+
