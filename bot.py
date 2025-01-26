@@ -23,7 +23,8 @@ GOOGLE_API_KEY = "AIzaSyCHcbAHrO383FWQqIXrS-H7Xid1G4CaGeg"
 GOOGLE_CX = "a54de47eb8d024e8f"
 GIPHY_API_KEY = "cd2qSZ4eWr8ineY0X9rhBalcuWVrRxyx"
 OPENAI_API_KEY = "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"
-openai.api_key = "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"
+openai.api_key = os.getenv("OPENAI_API_KEY")  # or directly use "your_api_key_here"
+
 # Create your bot application
 application = ApplicationBuilder().token(BOT_TOKEN).build()
 
