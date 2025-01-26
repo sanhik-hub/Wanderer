@@ -221,4 +221,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+# Handle direct chat with the bot
+async def chat_with_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_message = update.message.text
+    if user_message:
+        try:
+            response = get_openai_response(user_message)
+            await update.message.reply_text(response)
+        except Exception as e:
+            await update.message.reply_text("Sorry, I couldn't process that. Please try again later.")
+            logger.error(f"Error in chat_with_bot: {e}")
 
+# Add the message handler for non-command messages
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_with_bot))
