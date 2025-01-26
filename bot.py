@@ -1,4 +1,5 @@
 import logging
+import os
 import requests
 from uuid import uuid4
 from telegram import InlineQueryResultArticle, InputTextMessageContent, Update
