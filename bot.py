@@ -213,25 +213,7 @@ def ping_app():
         time.sleep(300)  # Sleep for 5 minutes
 
 # Main function to start the bot and Flask app
-def main():
-    # Start the Flask app in a separate thread
-    Thread(target=run).start()
 
-    # Start pinging the app every 5 minutes in a separate thread
-    Thread(target=ping_app).start()
-
-    # Add command and inline query handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("set_personality", set_personality))
-    application.add_handler(CommandHandler("get_personality", get_personality))
-    application.add_handler(InlineQueryHandler(inline_query))
-    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), chat))
-
-    # Start the bot
-    application.run_polling()
-
-if __name__ == "__main__":
-    main()
 # Handle direct chat with the bot
 async def chat_with_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_message = update.message.text
@@ -256,4 +238,23 @@ async def chatgpt_response(query: str) -> str:
         return response.choices[0].text.strip()
     except Exception as e:
         return f"Error: {str(e)}"
+        def main():
+    # Start the Flask app in a separate thread
+    Thread(target=run).start()
+
+    # Start pinging the app every 5 minutes in a separate thread
+    Thread(target=ping_app).start()
+
+    # Add command and inline query handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("set_personality", set_personality))
+    application.add_handler(CommandHandler("get_personality", get_personality))
+    application.add_handler(InlineQueryHandler(inline_query))
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), chat))
+
+    # Start the bot
+    application.run_polling()
+
+if __name__ == "__main__":
+    main()
 
