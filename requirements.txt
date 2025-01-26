@@ -2,3 +2,4 @@ python-telegram-bot
 requests
 google-api-python-client
 flask
+openai
