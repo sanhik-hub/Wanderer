@@ -1,3 +1,4 @@
+Search bot (with ping)
 import logging
 import requests
 from uuid import uuid4
@@ -7,9 +8,6 @@ from googleapiclient.discovery import build
 from flask import Flask
 from threading import Thread
 import time
-from ntgcalls import PyTgCalls, GroupCallFactory, AudioSource
-from pyrogram import Client
-import os
 
 # Configure logging
 logging.basicConfig(
@@ -24,14 +22,6 @@ YOUTUBE_API_KEY = "AIzaSyCHcbAHrO383FWQqIXrS-H7Xid1G4CaGeg"
 GOOGLE_API_KEY = "AIzaSyCHcbAHrO383FWQqIXrS-H7Xid1G4CaGeg"
 GOOGLE_CX = "a54de47eb8d024e8f"
 GIPHY_API_KEY = "cd2qSZ4eWr8ineY0X9rhBalcuWVrRxyx"
-API_ID = "24645334"  # Replace with your API ID
-API_HASH = "e260832f866fcabc0075c346aa8f4f82"  # Replace with your API Hash
-SESSION_NAME = "none"  # Replace with your session name
-
-# Initialize Pyrogram Client and NativeTgCalls
-client = Client(SESSION_NAME, api_id=API_ID, api_hash=API_HASH)
-group_call_factory = GroupCallFactory(client)
-tgcalls = PyTgCalls(client)
 
 # Create your bot application
 application = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -79,15 +69,19 @@ def search_gif(query):
     return gifs
 
 def search_music(query):
+    # Placeholder function for music search
+    # Integration with a music API like Spotify or Apple Music can be implemented here
     return [
         {"title": f"Sample Song: {query}", "url": "https://example.com/sample_song"}
     ]
 
+# Start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "Hi! I can help you search for YouTube videos, Google results, music, and GIFs. Use the inline search feature by typing my username in any chat, followed by your query."
     )
 
+# Inline query handler
 async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.inline_query.query
     if not query:
@@ -95,6 +89,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     results = []
 
+    # Fetch YouTube videos
     videos = search_youtube(query)
     for video in videos:
         results.append(
@@ -106,6 +101,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             )
         )
 
+    # Fetch Google search results
     google_results = search_google(query)
     for result in google_results:
         results.append(
@@ -117,6 +113,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             )
         )
 
+    # Fetch GIFs
     gifs = search_gif(query)
     for gif in gifs:
         results.append(
@@ -128,6 +125,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             )
         )
 
+    # Fetch music
     music_results = search_music(query)
     for music in music_results:
         results.append(
@@ -141,52 +139,39 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     await update.inline_query.answer(results)
 
-async def play_music(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not context.args:
-        await update.message.reply_text("Please provide a YouTube URL to play.")
-        return
-
-    youtube_url = context.args[0]
-    chat_id = update.message.chat_id
-
-    try:
-        await tgcalls.start()
-        group_call = group_call_factory.get_group_call(chat_id)
-
-        audio_source = AudioSource.from_youtube(youtube_url)
-        await group_call.join()
-        await group_call.set_audio_source(audio_source)
-
-        await update.message.reply_text(f"Playing music from: {youtube_url}")
-    except Exception as e:
-        await update.message.reply_text(f"An error occurred: {e}")
-
+# Flask app to run alongside the bot
 app = Flask(__name__)
 
 @app.route('/')
 def home():
     return "Bot is running!"
 
+# Threaded function to run Flask app
 def run():
     app.run(host='0.0.0.0', port=8080)
 
+# Function to ping the app periodically (every 5 minutes)
 def ping_app():
     while True:
         try:
-            requests.get('https://wanderer-5g5v.onrender.com')
+            requests.get('https://wanderer-5g5v.onrender.com')  # Ping your app URL
         except requests.exceptions.RequestException as e:
             print(f"Error pinging app: {e}")
-        time.sleep(300)
+        time.sleep(300)  # Sleep for 5 minutes (300 seconds)
 
+# Main function to start the bot and Flask app
 def main():
+    # Start the Flask app in a separate thread
     Thread(target=run).start()
+
+    # Start pinging the app every 5 minutes in a separate thread
     Thread(target=ping_app).start()
 
+    # Add command and inline query handlers
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("play", play_music))
     application.add_handler(InlineQueryHandler(inline_query))
 
-    client.start()
+    # Start the bot
     application.run_polling()
 
 if __name__ == "__main__":
