@@ -4,3 +4,6 @@ google-api-python-client
 flask
 openai
 openai==0.28
+pyrogram
+pytgcalls
+youtube_dl
