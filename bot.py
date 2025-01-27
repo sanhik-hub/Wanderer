@@ -6,11 +6,10 @@ from telegram.ext import ApplicationBuilder, CommandHandler, InlineQueryHandler,
 from googleapiclient.discovery import build
 from flask import Flask
 from threading import Thread
-from pytgcalls import PyTgCalls
-from pyrogram import Client, filters
-from pyrogram.types import Message
-import youtube_dl
 import time
+from ntgcalls import PyTgCalls, GroupCallFactory, AudioSource
+from pyrogram import Client
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -25,42 +24,35 @@ YOUTUBE_API_KEY = "AIzaSyCHcbAHrO383FWQqIXrS-H7Xid1G4CaGeg"
 GOOGLE_API_KEY = "AIzaSyCHcbAHrO383FWQqIXrS-H7Xid1G4CaGeg"
 GOOGLE_CX = "a54de47eb8d024e8f"
 GIPHY_API_KEY = "cd2qSZ4eWr8ineY0X9rhBalcuWVrRxyx"
-API_ID = "24645334"
-API_HASH = "e260832f866fcabc0075c346aa8f4f82"
+API_ID = "24645334"  # Replace with your API ID
+API_HASH = "e260832f866fcabc0075c346aa8f4f82"  # Replace with your API Hash
+SESSION_NAME = "none"  # Replace with your session name
 
-# Initialize bot clients
+# Initialize Pyrogram Client and NativeTgCalls
+client = Client(SESSION_NAME, api_id=API_ID, api_hash=API_HASH)
+group_call_factory = GroupCallFactory(client)
+tgcalls = PyTgCalls(client)
+
+# Create your bot application
 application = ApplicationBuilder().token(BOT_TOKEN).build()
-pyro_client = Client("bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-pytgcalls = PyTgCalls(pyro_client)
-
-# YouTube download options
-ydl_opts = {
-    'format': 'bestaudio/best',
-    'postprocessors': [{
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192',
-    }],
-    'outtmpl': '%(id)s.%(ext)s',
-}
 
 # Define API search functions
 def search_youtube(query):
     youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
     request = youtube.search().list(
         part="snippet",
-        maxResults=1,
+        maxResults=5,  # Number of results to return
         q=query,
-        type="video"
+        type="video"  # Search only for videos
     )
     response = request.execute()
-    if "items" in response:
-        video = response["items"][0]
-        video_id = video["id"]["videoId"]
-        title = video["snippet"]["title"]
+    videos = []
+    for item in response.get("items", []):
+        video_id = item["id"]["videoId"]
+        title = item["snippet"]["title"]
         url = f"https://www.youtube.com/watch?v={video_id}"
-        return {"title": title, "url": url}
-    return None
+        videos.append({"title": title, "url": url})
+    return videos
 
 def search_google(query):
     url = f"https://www.googleapis.com/customsearch/v1?q={query}&key={GOOGLE_API_KEY}&cx={GOOGLE_CX}"
@@ -91,36 +83,11 @@ def search_music(query):
         {"title": f"Sample Song: {query}", "url": "https://example.com/sample_song"}
     ]
 
-async def play_audio(chat_id, query):
-    video = search_youtube(query)
-    if video:
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(video["url"], download=False)
-            pytgcalls.join_group_call(
-                chat_id,
-                input_stream=info['url'],
-                stream_type="local",
-            )
-        return f"Now playing: {video['title']}"
-    return "Couldn't find the song."
-
-# Command handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "Hi! I can play songs in voice chat, chat with users, and help with searches. "
-        "Use /play <song name> to play a song in voice chat."
+        "Hi! I can help you search for YouTube videos, Google results, music, and GIFs. Use the inline search feature by typing my username in any chat, followed by your query."
     )
 
-async def play(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = " ".join(context.args)
-    if not query:
-        await update.message.reply_text("Please provide a song name or YouTube URL.")
-        return
-    chat_id = update.message.chat_id
-    response = await play_audio(chat_id, query)
-    await update.message.reply_text(response)
-
-# Inline query handler
 async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.inline_query.query
     if not query:
@@ -128,9 +95,8 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     results = []
 
-    # Fetch YouTube videos
-    video = search_youtube(query)
-    if video:
+    videos = search_youtube(query)
+    for video in videos:
         results.append(
             InlineQueryResultArticle(
                 id=str(uuid4()),
@@ -140,26 +106,70 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             )
         )
 
+    google_results = search_google(query)
+    for result in google_results:
+        results.append(
+            InlineQueryResultArticle(
+                id=str(uuid4()),
+                title=f"Google: {result['title']}",
+                input_message_content=InputTextMessageContent(result["url"]),
+                description=f"View on Google: {result['url']}",
+            )
+        )
+
+    gifs = search_gif(query)
+    for gif in gifs:
+        results.append(
+            InlineQueryResultArticle(
+                id=str(uuid4()),
+                title=f"GIF: {gif['title']}",
+                input_message_content=InputTextMessageContent(gif["url"]),
+                description=f"View GIF: {gif['url']}",
+            )
+        )
+
+    music_results = search_music(query)
+    for music in music_results:
+        results.append(
+            InlineQueryResultArticle(
+                id=str(uuid4()),
+                title=f"Music: {music['title']}",
+                input_message_content=InputTextMessageContent(music["url"]),
+                description=f"Listen: {music['url']}",
+            )
+        )
+
     await update.inline_query.answer(results)
 
-# Group and PM chat interaction
-@pyro_client.on_message(filters.text)
-async def chat_response(client, message: Message):
-    if "hello" in message.text.lower():
-        await message.reply("Hi there! How can I assist you?")
+async def play_music(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not context.args:
+        await update.message.reply_text("Please provide a YouTube URL to play.")
+        return
 
-# Flask app to run alongside the bot
+    youtube_url = context.args[0]
+    chat_id = update.message.chat_id
+
+    try:
+        await tgcalls.start()
+        group_call = group_call_factory.get_group_call(chat_id)
+
+        audio_source = AudioSource.from_youtube(youtube_url)
+        await group_call.join()
+        await group_call.set_audio_source(audio_source)
+
+        await update.message.reply_text(f"Playing music from: {youtube_url}")
+    except Exception as e:
+        await update.message.reply_text(f"An error occurred: {e}")
+
 app = Flask(__name__)
 
 @app.route('/')
 def home():
     return "Bot is running!"
 
-# Threaded function to run Flask app
 def run():
     app.run(host='0.0.0.0', port=8080)
 
-# Function to ping the app periodically (every 5 minutes)
 def ping_app():
     while True:
         try:
@@ -168,17 +178,16 @@ def ping_app():
             print(f"Error pinging app: {e}")
         time.sleep(300)
 
-# Main function to start the bot and Flask app
 def main():
     Thread(target=run).start()
     Thread(target=ping_app).start()
+
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("play", play))
+    application.add_handler(CommandHandler("play", play_music))
     application.add_handler(InlineQueryHandler(inline_query))
-    pytgcalls.start()
-    pyro_client.start()
+
+    client.start()
     application.run_polling()
 
 if __name__ == "__main__":
     main()
-
