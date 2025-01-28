@@ -1,4 +1,3 @@
-Search bot (with ping)
 import logging
 import requests
 from uuid import uuid4
